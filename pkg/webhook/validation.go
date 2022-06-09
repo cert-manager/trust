@@ -25,10 +25,8 @@ import (
 	"sync"
 
 	"github.com/go-logr/logr"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/cert-manager/trust/pkg/apis/trust"
@@ -39,7 +37,6 @@ import (
 type validator struct {
 	log logr.Logger
 
-	lister  client.Reader
 	decoder *admission.Decoder
 
 	lock sync.RWMutex
@@ -155,23 +152,6 @@ func (v *validator) validateBundle(ctx context.Context, bundle *trustapi.Bundle)
 		el = append(el, field.Invalid(path.Child("target", "configMap"), configMap, "target configMap must be defined"))
 	} else if len(configMap.Key) == 0 {
 		el = append(el, field.Invalid(path.Child("target", "configMap", "key"), configMap.Key, "target configMap key must be defined"))
-	}
-
-	if configMap := bundle.Spec.Target.ConfigMap; configMap != nil {
-		var existingBundleList trustapi.BundleList
-		if err := v.lister.List(ctx, &existingBundleList); err != nil {
-			return el, errors.New("failed to list existing Bundle resources")
-		}
-
-		for _, existingBundle := range existingBundleList.Items {
-			if existingBundle.Name == bundle.Name {
-				continue
-			}
-
-			if apiequality.Semantic.DeepEqual(bundle.Spec.Target, existingBundle.Spec.Target) {
-				el = append(el, field.Invalid(path.Child("target", "configMap", "key"), configMap.Key, fmt.Sprintf("cannot use the same target as another Bundle %q", existingBundle.Name)))
-			}
-		}
 	}
 
 	if nsSel := bundle.Spec.Target.NamespaceSelector; nsSel != nil && len(nsSel.MatchLabels) > 0 {

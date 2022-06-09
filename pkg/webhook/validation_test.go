@@ -28,7 +28,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/klog/v2/klogr"
 	"k8s.io/utils/pointer"
-	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	trustapi "github.com/cert-manager/trust/pkg/apis/trust/v1alpha1"
@@ -212,16 +211,12 @@ func Test_Handle(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			fakeclient := fakeclient.NewClientBuilder().
-				WithScheme(trustapi.GlobalScheme).
-				Build()
-
 			decoder, err := admission.NewDecoder(trustapi.GlobalScheme)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			v := &validator{lister: fakeclient, decoder: decoder, log: klogr.New()}
+			v := &validator{decoder: decoder, log: klogr.New()}
 			resp := v.Handle(context.TODO(), test.req)
 			if !apiequality.Semantic.DeepEqual(test.expResp, resp) {
 				t.Errorf("unexpected validate admission response: exp=%+v got=%+v", test.expResp, resp)
@@ -236,9 +231,8 @@ func Test_validateBundle(t *testing.T) {
 	)
 
 	tests := map[string]struct {
-		bundle          *trustapi.Bundle
-		existingBundles []runtime.Object
-		expEl           field.ErrorList
+		bundle *trustapi.Bundle
+		expEl  field.ErrorList
 	}{
 		"no sources, no target": {
 			bundle: &trustapi.Bundle{
@@ -315,54 +309,6 @@ func Test_validateBundle(t *testing.T) {
 			},
 			expEl: field.ErrorList{
 				field.Invalid(field.NewPath("spec", "target", "configMap", "key"), "", "target configMap key must be defined"),
-			},
-		},
-		"if other bundles exist, but don't share the same target, don't error": {
-			bundle: &trustapi.Bundle{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-bundle-1"},
-				Spec: trustapi.BundleSpec{
-					Sources: []trustapi.BundleSource{
-						{InLine: pointer.String("test-1")},
-					},
-					Target: trustapi.BundleTarget{ConfigMap: &trustapi.KeySelector{Key: "test-1"}},
-				},
-			},
-			existingBundles: []runtime.Object{
-				&trustapi.Bundle{
-					ObjectMeta: metav1.ObjectMeta{Name: "test-bundle-2"},
-					Spec: trustapi.BundleSpec{
-						Sources: []trustapi.BundleSource{
-							{InLine: pointer.String("test-2")},
-						},
-						Target: trustapi.BundleTarget{ConfigMap: &trustapi.KeySelector{Key: "test-2"}},
-					},
-				},
-			},
-			expEl: nil,
-		},
-		"if other bundles exist, error when they have the same target": {
-			bundle: &trustapi.Bundle{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-bundle-1"},
-				Spec: trustapi.BundleSpec{
-					Sources: []trustapi.BundleSource{
-						{InLine: pointer.String("test-1")},
-					},
-					Target: trustapi.BundleTarget{ConfigMap: &trustapi.KeySelector{Key: "test-1"}},
-				},
-			},
-			existingBundles: []runtime.Object{
-				&trustapi.Bundle{
-					ObjectMeta: metav1.ObjectMeta{Name: "test-bundle-2"},
-					Spec: trustapi.BundleSpec{
-						Sources: []trustapi.BundleSource{
-							{InLine: pointer.String("test-2")},
-						},
-						Target: trustapi.BundleTarget{ConfigMap: &trustapi.KeySelector{Key: "test-1"}},
-					},
-				},
-			},
-			expEl: field.ErrorList{
-				field.Invalid(field.NewPath("spec", "target", "configMap", "key"), "test-1", `cannot use the same target as another Bundle "test-bundle-2"`),
 			},
 		},
 		"conditions with the same type": {
@@ -451,14 +397,7 @@ func Test_validateBundle(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			builder := fakeclient.NewClientBuilder().
-				WithScheme(trustapi.GlobalScheme)
-			if len(test.existingBundles) > 0 {
-				builder.WithRuntimeObjects(test.existingBundles...)
-			}
-
-			v := &validator{lister: builder.Build()}
-			el, err := v.validateBundle(context.TODO(), test.bundle)
+			el, err := new(validator).validateBundle(context.TODO(), test.bundle)
 			if err != nil {
 				t.Errorf("unexpected error: %s", err)
 			}

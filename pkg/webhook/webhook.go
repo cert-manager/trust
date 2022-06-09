@@ -31,7 +31,7 @@ type Options struct {
 func Register(mgr manager.Manager, opts Options) {
 	opts.Log.Info("registering webhook endpoints")
 
-	validator := &validator{log: opts.Log.WithName("validation"), lister: mgr.GetCache()}
+	validator := &validator{log: opts.Log.WithName("validation")}
 	mgr.GetWebhookServer().Register("/validate", &webhook.Admission{Handler: validator})
 	mgr.AddReadyzCheck("validator", validator.check)
 }
