@@ -2,7 +2,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.6.1
+    controller-gen.kubebuilder.io/version: v0.8.0
   creationTimestamp: null
   name: bundles.trust.cert-manager.io
 spec:
@@ -60,6 +60,9 @@ spec:
                     description: BundleSource is the set of sources whose data will be appended and synced to the BundleTarget in all Namespaces.
                     type: object
                     properties:
+                      ccadb:
+                        description: CCADB is an embedded copy of the certificates in Mozilla's root store that have the websites trust bit enabled.
+                        type: boolean
                       configMap:
                         description: ConfigMap is a reference to a ConfigMap's `data` key, in the trust Namespace.
                         type: object

@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/breml/rootcerts/embedded"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -54,6 +55,11 @@ func (b *bundle) buildSourceBundle(ctx context.Context, bundle *trustapi.Bundle)
 
 		case source.InLine != nil:
 			sourceData = *source.InLine
+
+		case source.CCADB != nil:
+			if *source.CCADB {
+				sourceData = embedded.MozillaCACertificatesPEM()
+			}
 		}
 
 		if err != nil {

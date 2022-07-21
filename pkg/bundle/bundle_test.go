@@ -18,9 +18,11 @@ package bundle
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/breml/rootcerts/embedded"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -88,6 +90,7 @@ func Test_Reconcile(t *testing.T) {
 					{ConfigMap: &trustapi.SourceObjectKeySelector{Name: sourceConfigMapName, KeySelector: trustapi.KeySelector{Key: sourceConfigMapKey}}},
 					{Secret: &trustapi.SourceObjectKeySelector{Name: sourceSecretName, KeySelector: trustapi.KeySelector{Key: sourceSecretKey}}},
 					{InLine: pointer.String("C")},
+					{CCADB: pointer.Bool(true)},
 				},
 				Target: trustapi.BundleTarget{ConfigMap: &trustapi.KeySelector{Key: targetKey}},
 			},
@@ -272,17 +275,17 @@ func Test_Reconcile(t *testing.T) {
 				&corev1.ConfigMap{
 					TypeMeta:   metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
 					ObjectMeta: metav1.ObjectMeta{Namespace: trustNamespace, Name: baseBundle.Name, OwnerReferences: baseBundleOwnerRef, ResourceVersion: "1"},
-					Data:       map[string]string{targetKey: "A\nB\nC\n"},
+					Data:       map[string]string{targetKey: "A\nB\nC\n" + strings.TrimSpace(embedded.MozillaCACertificatesPEM()) + "\n"},
 				},
 				&corev1.ConfigMap{
 					TypeMeta:   metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
 					ObjectMeta: metav1.ObjectMeta{Namespace: "ns-1", Name: baseBundle.Name, OwnerReferences: baseBundleOwnerRef, ResourceVersion: "1"},
-					Data:       map[string]string{targetKey: "A\nB\nC\n"},
+					Data:       map[string]string{targetKey: "A\nB\nC\n" + strings.TrimSpace(embedded.MozillaCACertificatesPEM()) + "\n"},
 				},
 				&corev1.ConfigMap{
 					TypeMeta:   metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
 					ObjectMeta: metav1.ObjectMeta{Namespace: "ns-2", Name: baseBundle.Name, OwnerReferences: baseBundleOwnerRef, ResourceVersion: "1"},
-					Data:       map[string]string{targetKey: "A\nB\nC\n"},
+					Data:       map[string]string{targetKey: "A\nB\nC\n" + strings.TrimSpace(embedded.MozillaCACertificatesPEM()) + "\n"},
 				},
 			),
 			expEvent: "Normal Synced Successfully synced Bundle to all namespaces",
@@ -317,17 +320,17 @@ func Test_Reconcile(t *testing.T) {
 				&corev1.ConfigMap{
 					TypeMeta:   metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
 					ObjectMeta: metav1.ObjectMeta{Namespace: trustNamespace, Name: baseBundle.Name, OwnerReferences: baseBundleOwnerRef, ResourceVersion: "1"},
-					Data:       map[string]string{targetKey: "A\nB\nC\n"},
+					Data:       map[string]string{targetKey: "A\nB\nC\n" + strings.TrimSpace(embedded.MozillaCACertificatesPEM()) + "\n"},
 				},
 				&corev1.ConfigMap{
 					TypeMeta:   metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
 					ObjectMeta: metav1.ObjectMeta{Namespace: "ns-1", Name: baseBundle.Name, OwnerReferences: baseBundleOwnerRef, ResourceVersion: "1"},
-					Data:       map[string]string{targetKey: "A\nB\nC\n"},
+					Data:       map[string]string{targetKey: "A\nB\nC\n" + strings.TrimSpace(embedded.MozillaCACertificatesPEM()) + "\n"},
 				},
 				&corev1.ConfigMap{
 					TypeMeta:   metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
 					ObjectMeta: metav1.ObjectMeta{Namespace: "ns-2", Name: baseBundle.Name, OwnerReferences: baseBundleOwnerRef, ResourceVersion: "1"},
-					Data:       map[string]string{targetKey: "A\nB\nC\n"},
+					Data:       map[string]string{targetKey: "A\nB\nC\n" + strings.TrimSpace(embedded.MozillaCACertificatesPEM()) + "\n"},
 				},
 			),
 			expEvent: "Normal Synced Successfully synced Bundle to all namespaces",
@@ -351,15 +354,15 @@ func Test_Reconcile(t *testing.T) {
 				),
 				&corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{Namespace: trustNamespace, Name: baseBundle.Name},
-					Data:       map[string]string{targetKey: "A\nB\nC\n"},
+					Data:       map[string]string{targetKey: "A\nB\nC\n" + strings.TrimSpace(embedded.MozillaCACertificatesPEM()) + "\n"},
 				},
 				&corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{Namespace: "ns-1", Name: baseBundle.Name},
-					Data:       map[string]string{targetKey: "A\nB\nC\n"},
+					Data:       map[string]string{targetKey: "A\nB\nC\n" + strings.TrimSpace(embedded.MozillaCACertificatesPEM()) + "\n"},
 				},
 				&corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{Namespace: "ns-2", Name: baseBundle.Name},
-					Data:       map[string]string{targetKey: "A\nB\nC\n"},
+					Data:       map[string]string{targetKey: "A\nB\nC\n" + strings.TrimSpace(embedded.MozillaCACertificatesPEM()) + "\n"},
 				},
 			),
 			expResult: ctrl.Result{},
@@ -384,17 +387,17 @@ func Test_Reconcile(t *testing.T) {
 				&corev1.ConfigMap{
 					TypeMeta:   metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
 					ObjectMeta: metav1.ObjectMeta{Namespace: trustNamespace, Name: baseBundle.Name, OwnerReferences: baseBundleOwnerRef, ResourceVersion: "1000"},
-					Data:       map[string]string{targetKey: "A\nB\nC\n"},
+					Data:       map[string]string{targetKey: "A\nB\nC\n" + strings.TrimSpace(embedded.MozillaCACertificatesPEM()) + "\n"},
 				},
 				&corev1.ConfigMap{
 					TypeMeta:   metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
 					ObjectMeta: metav1.ObjectMeta{Namespace: "ns-1", Name: baseBundle.Name, OwnerReferences: baseBundleOwnerRef, ResourceVersion: "1000"},
-					Data:       map[string]string{targetKey: "A\nB\nC\n"},
+					Data:       map[string]string{targetKey: "A\nB\nC\n" + strings.TrimSpace(embedded.MozillaCACertificatesPEM()) + "\n"},
 				},
 				&corev1.ConfigMap{
 					TypeMeta:   metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
 					ObjectMeta: metav1.ObjectMeta{Namespace: "ns-2", Name: baseBundle.Name, OwnerReferences: baseBundleOwnerRef, ResourceVersion: "1000"},
-					Data:       map[string]string{targetKey: "A\nB\nC\n"},
+					Data:       map[string]string{targetKey: "A\nB\nC\n" + strings.TrimSpace(embedded.MozillaCACertificatesPEM()) + "\n"},
 				},
 			),
 			expEvent: "Normal Synced Successfully synced Bundle to all namespaces",
@@ -404,17 +407,17 @@ func Test_Reconcile(t *testing.T) {
 				&corev1.ConfigMap{
 					TypeMeta:   metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
 					ObjectMeta: metav1.ObjectMeta{Namespace: trustNamespace, Name: baseBundle.Name, OwnerReferences: baseBundleOwnerRef},
-					Data:       map[string]string{targetKey: "A\nB\nC\n"},
+					Data:       map[string]string{targetKey: "A\nB\nC\n" + strings.TrimSpace(embedded.MozillaCACertificatesPEM()) + "\n"},
 				},
 				&corev1.ConfigMap{
 					TypeMeta:   metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
 					ObjectMeta: metav1.ObjectMeta{Namespace: "ns-1", Name: baseBundle.Name, OwnerReferences: baseBundleOwnerRef},
-					Data:       map[string]string{targetKey: "A\nB\nC\n"},
+					Data:       map[string]string{targetKey: "A\nB\nC\n" + strings.TrimSpace(embedded.MozillaCACertificatesPEM()) + "\n"},
 				},
 				&corev1.ConfigMap{
 					TypeMeta:   metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
 					ObjectMeta: metav1.ObjectMeta{Namespace: "ns-2", Name: baseBundle.Name, OwnerReferences: baseBundleOwnerRef},
-					Data:       map[string]string{targetKey: "A\nB\nC\n"},
+					Data:       map[string]string{targetKey: "A\nB\nC\n" + strings.TrimSpace(embedded.MozillaCACertificatesPEM()) + "\n"},
 				},
 			),
 			expResult: ctrl.Result{},
@@ -439,17 +442,17 @@ func Test_Reconcile(t *testing.T) {
 				&corev1.ConfigMap{
 					TypeMeta:   metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
 					ObjectMeta: metav1.ObjectMeta{Namespace: trustNamespace, Name: baseBundle.Name, OwnerReferences: baseBundleOwnerRef, ResourceVersion: "999"},
-					Data:       map[string]string{targetKey: "A\nB\nC\n"},
+					Data:       map[string]string{targetKey: "A\nB\nC\n" + strings.TrimSpace(embedded.MozillaCACertificatesPEM()) + "\n"},
 				},
 				&corev1.ConfigMap{
 					TypeMeta:   metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
 					ObjectMeta: metav1.ObjectMeta{Namespace: "ns-1", Name: baseBundle.Name, OwnerReferences: baseBundleOwnerRef, ResourceVersion: "999"},
-					Data:       map[string]string{targetKey: "A\nB\nC\n"},
+					Data:       map[string]string{targetKey: "A\nB\nC\n" + strings.TrimSpace(embedded.MozillaCACertificatesPEM()) + "\n"},
 				},
 				&corev1.ConfigMap{
 					TypeMeta:   metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
 					ObjectMeta: metav1.ObjectMeta{Namespace: "ns-2", Name: baseBundle.Name, OwnerReferences: baseBundleOwnerRef, ResourceVersion: "999"},
-					Data:       map[string]string{targetKey: "A\nB\nC\n"},
+					Data:       map[string]string{targetKey: "A\nB\nC\n" + strings.TrimSpace(embedded.MozillaCACertificatesPEM()) + "\n"},
 				},
 			),
 			expEvent: "Normal Synced Successfully synced Bundle to all namespaces",
@@ -473,15 +476,15 @@ func Test_Reconcile(t *testing.T) {
 				),
 				&corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{Namespace: trustNamespace, Name: baseBundle.Name, OwnerReferences: baseBundleOwnerRef},
-					Data:       map[string]string{targetKey: "A\nB\nC\n"},
+					Data:       map[string]string{targetKey: "A\nB\nC\n" + strings.TrimSpace(embedded.MozillaCACertificatesPEM()) + "\n"},
 				},
 				&corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{Namespace: "ns-1", Name: baseBundle.Name, OwnerReferences: baseBundleOwnerRef},
-					Data:       map[string]string{targetKey: "A\nB\nC\n"},
+					Data:       map[string]string{targetKey: "A\nB\nC\n" + strings.TrimSpace(embedded.MozillaCACertificatesPEM()) + "\n"},
 				},
 				&corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{Namespace: "ns-2", Name: baseBundle.Name, OwnerReferences: baseBundleOwnerRef},
-					Data:       map[string]string{targetKey: "A\nB\nC\n"},
+					Data:       map[string]string{targetKey: "A\nB\nC\n" + strings.TrimSpace(embedded.MozillaCACertificatesPEM()) + "\n"},
 				},
 			),
 			expResult: ctrl.Result{},
@@ -506,17 +509,17 @@ func Test_Reconcile(t *testing.T) {
 				&corev1.ConfigMap{
 					TypeMeta:   metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
 					ObjectMeta: metav1.ObjectMeta{Namespace: trustNamespace, Name: baseBundle.Name, OwnerReferences: baseBundleOwnerRef, ResourceVersion: "999"},
-					Data:       map[string]string{targetKey: "A\nB\nC\n"},
+					Data:       map[string]string{targetKey: "A\nB\nC\n" + strings.TrimSpace(embedded.MozillaCACertificatesPEM()) + "\n"},
 				},
 				&corev1.ConfigMap{
 					TypeMeta:   metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
 					ObjectMeta: metav1.ObjectMeta{Namespace: "ns-1", Name: baseBundle.Name, OwnerReferences: baseBundleOwnerRef, ResourceVersion: "999"},
-					Data:       map[string]string{targetKey: "A\nB\nC\n"},
+					Data:       map[string]string{targetKey: "A\nB\nC\n" + strings.TrimSpace(embedded.MozillaCACertificatesPEM()) + "\n"},
 				},
 				&corev1.ConfigMap{
 					TypeMeta:   metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
 					ObjectMeta: metav1.ObjectMeta{Namespace: "ns-2", Name: baseBundle.Name, OwnerReferences: baseBundleOwnerRef, ResourceVersion: "999"},
-					Data:       map[string]string{targetKey: "A\nB\nC\n"},
+					Data:       map[string]string{targetKey: "A\nB\nC\n" + strings.TrimSpace(embedded.MozillaCACertificatesPEM()) + "\n"},
 				},
 			),
 			expEvent: "",

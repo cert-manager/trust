@@ -76,6 +76,10 @@ type BundleSource struct {
 	// InLine is a simple string to append as the source data.
 	// +optional
 	InLine *string `json:"inLine,omitempty"`
+
+	// CCADB is an embedded copy of the certificates in Mozilla's root store
+	// that have the websites trust bit enabled.
+	CCADB *bool `json:"ccadb,omitempty"`
 }
 
 // BundleTarget is the target resource that the Bundle will sync all source

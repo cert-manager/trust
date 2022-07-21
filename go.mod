@@ -3,6 +3,7 @@ module github.com/cert-manager/trust
 go 1.18
 
 require (
+	github.com/breml/rootcerts v0.2.4
 	github.com/go-logr/logr v1.2.3
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/ginkgo/v2 v2.1.3
