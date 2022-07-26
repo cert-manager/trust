@@ -47,11 +47,12 @@ import (
 // The controller will only cache metadata for ConfigMaps and Secrets.
 func AddBundleController(ctx context.Context, mgr manager.Manager, opts Options) error {
 	b := &bundle{
-		client:   mgr.GetClient(),
-		lister:   mgr.GetCache(),
-		recorder: mgr.GetEventRecorderFor("bundles"),
-		clock:    clock.RealClock{},
-		Options:  opts,
+		client:    mgr.GetClient(),
+		lister:    mgr.GetCache(),
+		recorder:  mgr.GetEventRecorderFor("bundles"),
+		clock:     clock.RealClock{},
+		etagCache: newEtagCache(),
+		Options:   opts,
 	}
 
 	// Only reconcile config maps that match the well known name

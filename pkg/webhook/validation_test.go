@@ -418,6 +418,99 @@ func Test_validateBundle(t *testing.T) {
 				field.Invalid(field.NewPath("spec", "target", "namespaceSelector", "matchLabels"), map[string]string{"@@@@": ""}, `key: Invalid value: "@@@@": name part must consist of alphanumeric characters, '-', '_' or '.', and must start and end with an alphanumeric character (e.g. 'MyName',  or 'my.name',  or '123-abc', regex used for validation is '([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9]')`),
 			},
 		},
+		"https test: missing fields": {
+			bundle: &trustapi.Bundle{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-bundle-1"},
+				Spec: trustapi.BundleSpec{
+					Sources: []trustapi.BundleSource{
+						{
+							HTTPS: &trustapi.SourceHTTPS{
+								URL:      "",
+								CABundle: "",
+							},
+						},
+					},
+					Target: trustapi.BundleTarget{
+						ConfigMap: &trustapi.KeySelector{Key: "test-1"},
+						NamespaceSelector: &trustapi.NamespaceSelector{
+							MatchLabels: map[string]string{"foo": "bar"},
+						},
+					},
+				},
+				Status: trustapi.BundleStatus{},
+			},
+			expEl: field.ErrorList{
+				field.Required(field.NewPath("spec", "sources", "[0]", "https", "url"), "url"),
+				field.Required(field.NewPath("spec", "sources", "[0]", "https", "caBundle"), "caBundle"),
+			},
+		},
+		"https test: invalid data": {
+			bundle: &trustapi.Bundle{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-bundle-1"},
+				Spec: trustapi.BundleSpec{
+					Sources: []trustapi.BundleSource{
+						{
+							HTTPS: &trustapi.SourceHTTPS{
+								URL:          "gopher://foo/bar/baz",
+								CABundle:     "junk",
+								PollInterval: pointer.String("twenty-two seconds"),
+							},
+						},
+					},
+					Target: trustapi.BundleTarget{
+						ConfigMap: &trustapi.KeySelector{Key: "test-1"},
+						NamespaceSelector: &trustapi.NamespaceSelector{
+							MatchLabels: map[string]string{"foo": "bar"},
+						},
+					},
+				},
+				Status: trustapi.BundleStatus{},
+			},
+			expEl: field.ErrorList{
+				field.Invalid(field.NewPath("spec", "sources", "[0]", "https", "url"), "gopher://foo/bar/baz", "target url scheme must be https"),
+				field.Invalid(field.NewPath("spec", "sources", "[0]", "https", "caBundle"), "junk", "caBundle contains no valid certs"),
+				field.Invalid(field.NewPath("spec", "sources", "[0]", "https", "pollInterval"), "twenty-two seconds", "could not parse duration"),
+			},
+		},
+		"https test: valid data": {
+			bundle: &trustapi.Bundle{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-bundle-1"},
+				Spec: trustapi.BundleSpec{
+					Sources: []trustapi.BundleSource{
+						{
+							HTTPS: &trustapi.SourceHTTPS{
+								URL: "https://foo.bar:8888/tls.pem",
+								CABundle: `some junk header
+-----BEGIN CERTIFICATE-----
+MIICGzCCAaGgAwIBAgIQQdKd0XLq7qeAwSxs6S+HUjAKBggqhkjOPQQDAzBPMQsw
+CQYDVQQGEwJVUzEpMCcGA1UEChMgSW50ZXJuZXQgU2VjdXJpdHkgUmVzZWFyY2gg
+R3JvdXAxFTATBgNVBAMTDElTUkcgUm9vdCBYMjAeFw0yMDA5MDQwMDAwMDBaFw00
+MDA5MTcxNjAwMDBaME8xCzAJBgNVBAYTAlVTMSkwJwYDVQQKEyBJbnRlcm5ldCBT
+ZWN1cml0eSBSZXNlYXJjaCBHcm91cDEVMBMGA1UEAxMMSVNSRyBSb290IFgyMHYw
+EAYHKoZIzj0CAQYFK4EEACIDYgAEzZvVn4CDCuwJSvMWSj5cz3es3mcFDR0HttwW
++1qLFNvicWDEukWVEYmO6gbf9yoWHKS5xcUy4APgHoIYOIvXRdgKam7mAHf7AlF9
+ItgKbppbd9/w+kHsOdx1ymgHDB/qo0IwQDAOBgNVHQ8BAf8EBAMCAQYwDwYDVR0T
+AQH/BAUwAwEB/zAdBgNVHQ4EFgQUfEKWrt5LSDv6kviejM9ti6lyN5UwCgYIKoZI
+zj0EAwMDaAAwZQIwe3lORlCEwkSHRhtFcP9Ymd70/aTSVaYgLXTWNLxBo1BfASdW
+tL4ndQavEi51mI38AjEAi/V3bNTIZargCyzuFJ0nN6T5U6VR5CmD1/iQMVtCnwr1
+/q4AaOeMSQ+2b1tbFfLn
+-----END CERTIFICATE-----
+some junk footer
+`,
+								PollInterval: pointer.String("10s"),
+							},
+						},
+					},
+					Target: trustapi.BundleTarget{
+						ConfigMap: &trustapi.KeySelector{Key: "test-1"},
+						NamespaceSelector: &trustapi.NamespaceSelector{
+							MatchLabels: map[string]string{"foo": "bar"},
+						},
+					},
+				},
+				Status: trustapi.BundleStatus{},
+			},
+		},
 		"valid bundle": {
 			bundle: &trustapi.Bundle{
 				ObjectMeta: metav1.ObjectMeta{Name: "test-bundle-1"},

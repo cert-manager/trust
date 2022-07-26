@@ -73,6 +73,22 @@ spec:
                           name:
                             description: Name is the name of the source object in the trust Namespace.
                             type: string
+                      https:
+                        description: HTTPS downloads a PEM-Formatted trust bundle from an HTTPS server
+                        type: object
+                        required:
+                          - caBundle
+                          - url
+                        properties:
+                          caBundle:
+                            description: CABundle is the CA Bundle required to verify the target server's identity.
+                            type: string
+                          pollInterval:
+                            description: PollInterval is the period at which the controller will check for changes on the server.
+                            type: string
+                          url:
+                            description: URL is an HTTPS URL.
+                            type: string
                       inLine:
                         description: InLine is a simple string to append as the source data.
                         type: string

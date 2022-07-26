@@ -18,11 +18,16 @@ package webhook
 
 import (
 	"context"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/go-logr/logr"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -134,6 +139,55 @@ func (v *validator) validateBundle(ctx context.Context, bundle *trustapi.Bundle)
 
 			if source.InLine != nil {
 				unionCount++
+			}
+
+			if https := source.HTTPS; https != nil {
+				path := path.Child("https")
+				unionCount++
+
+				if len(https.URL) == 0 {
+					el = append(el, field.Required(path.Child("url"), "url"))
+				}
+				if len(https.CABundle) == 0 {
+					el = append(el, field.Required(path.Child("caBundle"), "caBundle"))
+				}
+
+				if len(https.URL) > 0 {
+					targetURL, err := url.Parse(https.URL)
+					if err != nil {
+						el = append(el, field.Invalid(path.Child("url"), https.URL, "target url is not valid"))
+					} else if strings.ToLower(targetURL.Scheme) != "https" {
+						el = append(el, field.Invalid(path.Child("url"), https.URL, "target url scheme must be https"))
+					}
+				}
+
+				if len(https.CABundle) > 0 {
+					var block *pem.Block
+					certBytes := []byte(https.CABundle)
+					var seenCerts []*x509.Certificate
+					for {
+						block, certBytes = pem.Decode(certBytes)
+						if block == nil {
+							break
+						}
+						cert, err := x509.ParseCertificate(block.Bytes)
+						if err != nil {
+							el = append(el, field.Invalid(path.Child("caBundle"), https.CABundle, "caBundle contains invalid data: "+err.Error()))
+							break
+						}
+						seenCerts = append(seenCerts, cert)
+					}
+					if len(seenCerts) == 0 {
+						el = append(el, field.Invalid(path.Child("caBundle"), https.CABundle, "caBundle contains no valid certs"))
+					}
+				}
+
+				if https.PollInterval != nil {
+					_, err := time.ParseDuration(*https.PollInterval)
+					if err != nil {
+						el = append(el, field.Invalid(path.Child("pollInterval"), *https.PollInterval, "could not parse duration"))
+					}
+				}
 			}
 
 			if unionCount != 1 {

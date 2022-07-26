@@ -18,9 +18,15 @@ package bundle
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -55,6 +61,9 @@ func (b *bundle) buildSourceBundle(ctx context.Context, bundle *trustapi.Bundle)
 
 		case source.InLine != nil:
 			sourceData = *source.InLine
+
+		case source.HTTPS != nil:
+			sourceData, err = b.httpsBundle(ctx, source.HTTPS)
 		}
 
 		if err != nil {
@@ -111,6 +120,75 @@ func (b *bundle) secretBundle(ctx context.Context, ref *trustapi.SourceObjectKey
 	}
 
 	return string(data), nil
+}
+
+func (b *bundle) httpsBundle(ctx context.Context, ref *trustapi.SourceHTTPS) (string, error) {
+	// Only use CAs from the SourceHTTPS inline bundle:
+	cas := x509.NewCertPool()
+	var block *pem.Block
+	certBytes := []byte(ref.CABundle)
+	for {
+		block, certBytes = pem.Decode(certBytes)
+		if block == nil {
+			break
+		}
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			// shouldn't happen as we have passed the validating webhook at this point
+			return "", err
+		}
+		cas.AddCert(cert)
+	}
+	// Make HTTP client that uses the root CAs from the pool
+	c := &http.Client{
+		// Thought: make this configurable?
+		Timeout: 10 * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				RootCAs: cas,
+			},
+		},
+	}
+	// Construct request
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, ref.URL, nil)
+	if err != nil {
+		return "", fmt.Errorf("internal error constructing http request: %w", err)
+	}
+	// If we have cached data already, add etag and date to the request
+	b.etagCache.RLock()
+	if cachedData, found := b.etagCache.cache[ref.URL]; found {
+		req.Header.Add("If-None-Match", cachedData.etag)
+		req.Header.Add("If-Modified-Since", cachedData.date)
+	}
+	b.etagCache.RUnlock()
+	resp, err := c.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("couldn't make http request: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotModified {
+		b.etagCache.RLock()
+		bundleData := b.etagCache.cache[ref.URL].data
+		b.etagCache.RUnlock()
+		return string(bundleData), nil
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("internal error reading http response body: %w", err)
+	}
+	etag := resp.Header.Get("ETag")
+	date := resp.Header.Get("Date")
+	if etag == "" || date == "" {
+		return string(body), nil
+	}
+	b.etagCache.Lock()
+	b.etagCache.cache[ref.URL] = dataWithEtag{
+		etag: etag,
+		date: date,
+		data: body,
+	}
+	b.etagCache.Unlock()
+	return string(body), nil
 }
 
 // syncTarget syncs the given data to the target ConfigMap in the given

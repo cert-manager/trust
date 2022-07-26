@@ -200,8 +200,8 @@ def get_regexs():
     regexs = {}
     # Search for "YEAR" which exists in the boilerplate, but shouldn't in the real thing
     regexs["year"] = re.compile('YEAR')
-    # dates can be 2014, 2015, 2016, or 2017; company holder names can be anything
-    regexs["date"] = re.compile('(2014|2015|2016|2017)')
+    # dates can be 20XX; company holder names can be anything
+    regexs["date"] = re.compile('20[0-9][0-9]')
     # strip the following build constraints/tags:
     # //go:build
     # // +build \n\n

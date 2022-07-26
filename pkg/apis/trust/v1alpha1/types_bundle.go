@@ -51,7 +51,7 @@ type BundleList struct {
 	Items []Bundle `json:"items"`
 }
 
-// BundleSepc defines the desired state of a Bundle.
+// BundleSpec defines the desired state of a Bundle.
 type BundleSpec struct {
 	// Sources is a set of references to data whose data will sync to the target.
 	Sources []BundleSource `json:"sources"`
@@ -76,6 +76,21 @@ type BundleSource struct {
 	// InLine is a simple string to append as the source data.
 	// +optional
 	InLine *string `json:"inLine,omitempty"`
+
+	// HTTPS downloads a PEM-Formatted trust bundle from an HTTPS server
+	// +optional
+	HTTPS *SourceHTTPS `json:"https,omitempty"`
+}
+
+// SourceHTTPS represents a target HTTPS URL that will serve a PEM-formatted trust bundle.
+type SourceHTTPS struct {
+	// URL is an HTTPS URL.
+	URL string `json:"url"`
+	// CABundle is the CA Bundle required to verify the target server's identity.
+	CABundle string `json:"caBundle"`
+	// PollInterval is the period at which the controller will check for changes on the server.
+	// +optional
+	PollInterval *string `json:"pollInterval,omitempty"`
 }
 
 // BundleTarget is the target resource that the Bundle will sync all source

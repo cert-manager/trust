@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -62,6 +63,10 @@ type bundle struct {
 
 	// clock returns time which can be overwritten for testing.
 	clock clock.Clock
+
+	// etagCache holds cached responses with their date and etag, so HTTPS bundles
+	// do not cause unnecessary re-downloading
+	etagCache *etagCache
 
 	// Options hold options for the Bundle controller.
 	Options
@@ -215,13 +220,30 @@ func (b *bundle) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 		Message: message,
 	}
 
+	// Requeue after the minimum poll interval time of all HTTPS bundles
+	requeueAfter := time.Duration(0)
+	for _, s := range bundle.Spec.Sources {
+		if s.HTTPS != nil {
+			if s.HTTPS.PollInterval != nil {
+				interval, err := time.ParseDuration(*s.HTTPS.PollInterval)
+				if err != nil {
+					// should never happen as we have passed the validating webhook
+					continue
+				}
+				if interval > requeueAfter {
+					requeueAfter = interval
+				}
+			}
+		}
+	}
+
 	if !needsUpdate && bundleHasCondition(&bundle, syncedCondition) {
-		return ctrl.Result{}, nil
+		return ctrl.Result{RequeueAfter: requeueAfter}, nil
 	}
 
 	log.V(2).Info("successfully synced bundle")
 
 	b.setBundleCondition(&bundle, syncedCondition)
 	b.recorder.Eventf(&bundle, corev1.EventTypeNormal, "Synced", message)
-	return ctrl.Result{}, b.client.Status().Update(ctx, &bundle)
+	return ctrl.Result{RequeueAfter: requeueAfter}, b.client.Status().Update(ctx, &bundle)
 }
