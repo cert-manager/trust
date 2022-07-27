@@ -42,6 +42,10 @@ lint: vet
 vet:
 	go vet ./...
 
+.PHONY: verify-helm-docs
+verify-helm-docs: $(BINDIR)/helm-docs # verify helm-docs
+	./hack/verify-helm-docs.sh
+
 .PHONY: build
 build: | $(BINDIR) ## build trust
 	CGO_ENABLED=0 go build -o $(BINDIR)/cert-manager-trust ./cmd/.
@@ -79,25 +83,30 @@ smoke: demo ## create cluster, deploy trust and run smoke tests
 	REPO_ROOT=$(shell pwd) ./hack/ci/run-smoke-test.sh
 
 .PHONY: depend
-depend: $(BINDIR)/deepcopy-gen $(BINDIR)/controller-gen $(BINDIR)/ginkgo $(BINDIR)/kubectl $(BINDIR)/kind $(BINDIR)/helm $(BINDIR)/kubebuilder/bin/kube-apiserver
+depend: $(BINDIR)/deepcopy-gen $(BINDIR)/controller-gen $(BINDIR)/ginkgo $(BINDIR)/kubectl $(BINDIR)/kind $(BINDIR)/helm $(BINDIR)/kubebuilder/bin/kube-apiserver $(BINDIR)/helm-docs
 
 $(BINDIR)/deepcopy-gen: | $(BINDIR)
-	go build -o $@ k8s.io/code-generator/cmd/deepcopy-gen
+	mkdir -p $(BINDIR)
+	cd hack/bin && go build -o $@ k8s.io/code-generator/cmd/deepcopy-gen
 
 $(BINDIR)/controller-gen: | $(BINDIR)
-	go build -o $@ sigs.k8s.io/controller-tools/cmd/controller-gen
+	mkdir -p $(BINDIR)
+	cd hack/bin && go build -o $@ sigs.k8s.io/controller-tools/cmd/controller-gen
 
 $(BINDIR)/ginkgo: | $(BINDIR)
-	go build -o $(BINDIR)/ginkgo github.com/onsi/ginkgo/ginkgo
+	cd hack/bin && go build -o $(BINDIR)/ginkgo github.com/onsi/ginkgo/ginkgo
 
 $(BINDIR)/kind: | $(BINDIR)
-	go build -o $(BINDIR)/kind sigs.k8s.io/kind
+	cd hack/bin && go build -o $(BINDIR)/kind sigs.k8s.io/kind
 
 $(BINDIR)/helm: | $(BINDIR)
 	curl -o $(BINDIR)/helm.tar.gz -LO "https://get.helm.sh/helm-v$(HELM_VERSION)-$(OS)-$(ARCH).tar.gz"
 	tar -C $(BINDIR) -xzf $(BINDIR)/helm.tar.gz
 	cp $(BINDIR)/$(OS)-$(ARCH)/helm $@
 	rm -r $(BINDIR)/$(OS)-$(ARCH) $(BINDIR)/helm.tar.gz
+
+$(BINDIR)/helm-docs: | $(BINDIR)
+	cd hack/bin && go build -o $(BINDIR)/helm-docs github.com/norwoodj/helm-docs/cmd/helm-docs
 
 $(BINDIR)/kubectl: | $(BINDIR)
 	curl -o $@ -LO "https://storage.googleapis.com/kubernetes-release/release/$(shell curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/$(OS)/$(ARCH)/kubectl"

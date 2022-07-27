@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Copyright 2014 The Kubernetes Authors.
+# Copyright 2021 The cert-manager Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,16 +20,16 @@ set -o pipefail
 
 KUBE_ROOT=$(dirname "${BASH_SOURCE}")/..
 
-boilerDir="${KUBE_ROOT}/hack/boilerplate"
-boiler="${boilerDir}/boilerplate.py"
+HELM_DOCS_BIN="${KUBE_ROOT}/bin/helm-docs"
 
-files_need_boilerplate=($(${boiler} "$@"))
+TEMP_FILE=$(mktemp)
+trap '{ rm -f -- "$TEMP_FILE"; }' EXIT
 
-# Run boilerplate check
-if [[ ${#files_need_boilerplate[@]} -gt 0 ]]; then
-  for file in "${files_need_boilerplate[@]}"; do
-    echo "Boilerplate header is wrong for: ${file}"
-  done
+$HELM_DOCS_BIN ${KUBE_ROOT}/deploy/charts/trust -d -l error > ${TEMP_FILE}
 
+if ! cmp -s "${KUBE_ROOT}/deploy/charts/trust/README.md" "${TEMP_FILE}"; then
+  echo "Helm chart README.md is out of date."
+  echo "Please run './hack/update-helm-docs.sh'."
   exit 1
 fi
+

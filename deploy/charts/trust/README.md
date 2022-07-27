@@ -10,7 +10,7 @@ A Helm chart for cert-manager-trust
 
 | Name | Email | Url |
 | ---- | ------ | --- |
-| cert-manager-maintainers | cert-manager-maintainers@googlegroups.com | https://cert-manager.io |
+| cert-manager-maintainers | <cert-manager-maintainers@googlegroups.com> | <https://cert-manager.io> |
 
 ## Source Code
 
